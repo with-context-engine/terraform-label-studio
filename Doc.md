@@ -7,7 +7,7 @@ No requirements.
 
 The following providers are used by this module:
 
-- <a name="provider_aws"></a> [aws](#provider\_aws) (5.82.2)
+- <a name="provider_aws"></a> [aws](#provider\_aws)
 
 ## Modules
 
@@ -31,7 +31,6 @@ The following resources are used by this module:
 
 - [aws_apprunner_service.label_studio](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apprunner_service) (resource)
 - [aws_apprunner_vpc_connector.label_studio](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apprunner_vpc_connector) (resource)
-- [aws_ecr_repository.label_studio_image_repository](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecr_repository) (resource)
 - [aws_iam_policy.app_runner_instance_role_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) (resource)
 - [aws_iam_policy.app_runner_service_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) (resource)
 - [aws_iam_role.app_runner_instance_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) (resource)
@@ -43,6 +42,18 @@ The following resources are used by this module:
 ## Required Inputs
 
 The following input variables are required:
+
+### <a name="input_apprunner_label_studio_ecr_image_identifier"></a> [apprunner\_label\_studio\_ecr\_image\_identifier](#input\_apprunner\_label\_studio\_ecr\_image\_identifier)
+
+Description: The URI of the ECR repository for the label studio image. ex: 123456789012.dkr.ecr.us-east-1.amazonaws.com/label-studio:latest
+
+Type: `any`
+
+### <a name="input_apprunner_label_studio_ecr_image_repository_arn"></a> [apprunner\_label\_studio\_ecr\_image\_repository\_arn](#input\_apprunner\_label\_studio\_ecr\_image\_repository\_arn)
+
+Description: value of the ECR repository ARN for the label studio image
+
+Type: `any`
 
 ### <a name="input_apprunner_vpc_connector_security_group_ids"></a> [apprunner\_vpc\_connector\_security\_group\_ids](#input\_apprunner\_vpc\_connector\_security\_group\_ids)
 
