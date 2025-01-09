@@ -1,0 +1,12 @@
+version: '3'
+
+tasks:
+  default:
+    description: "This is the default task"
+    cmds:
+      - task --list
+
+  gendoc:
+    description: "Generate documentation"
+    cmds:
+      - terraform-docs markdown document --output-file README.md ./modules/
