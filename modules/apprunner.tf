@@ -32,7 +32,7 @@ resource "aws_iam_policy" "app_runner_service_policy" {
           "ecr:BatchCheckLayerAvailability"
         ],
         "Resource" : [
-          "${aws_ecr_repository.label_studio_image_repository.arn}"
+          "${var.apprunner_label_studio_ecr_image_repository_arn}",
         ]
       },
     ]
@@ -129,7 +129,7 @@ resource "aws_apprunner_service" "label_studio" {
           POSTGRE_PASSWORD        = local.db_password
         }
       }
-      image_identifier      = "${aws_ecr_repository.label_studio_image_repository.repository_url}:latest"
+      image_identifier      = var.apprunner_label_studio_ecr_image_identifier
       image_repository_type = "ECR"
     }
     authentication_configuration {

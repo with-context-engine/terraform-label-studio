@@ -15,6 +15,14 @@ variable "subnet_ids" {
 #################
 # AppRunner Variables
 #################
+variable "apprunner_label_studio_ecr_image_repository_arn" {
+  description = "value of the ECR repository ARN for the label studio image"
+}
+
+variable "apprunner_label_studio_ecr_image_identifier" {
+  description = "The URI of the ECR repository for the label studio image. ex: 123456789012.dkr.ecr.us-east-1.amazonaws.com/label-studio:latest"
+}
+
 variable "apprunner_port" {
   description = "value of the app runner port"
   default     = 8080
