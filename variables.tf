@@ -4,7 +4,7 @@
 #################
 variable "identifier" {
   description = "A unique identifier for the resources"
-  default     = "brij-v1"
+  default     = "label-studio-on-apprunner"
 }
 
 variable "subnet_ids" {
@@ -35,8 +35,8 @@ variable "apprunner_runtime_instance_configuration" {
     memory = string
   })
   default = {
-    cpu    = "4 vCPU"
-    memory = "12 GB"
+    cpu    = "1 vCPU"
+    memory = "2 GB"
   }
 }
 
