@@ -1,4 +1,3 @@
-
 resource "aws_iam_role" "app_runner_service_role" {
   name = "${var.identifier}-app-runner-service-role"
 
@@ -25,16 +24,22 @@ resource "aws_iam_policy" "app_runner_service_policy" {
       {
         "Effect" : "Allow",
         "Action" : [
+          "ecr:GetAuthorizationToken"
+        ],
+        "Resource" : "*"
+      },
+      {
+        "Effect" : "Allow",
+        "Action" : [
           "ecr:GetDownloadUrlForLayer",
           "ecr:BatchGetImage",
           "ecr:DescribeImages",
-          "ecr:GetAuthorizationToken",
           "ecr:BatchCheckLayerAvailability"
         ],
         "Resource" : [
-          "${var.apprunner_label_studio_ecr_image_repository_arn}",
+          "${var.apprunner_label_studio_ecr_image_repository_arn}"
         ]
-      },
+      }
     ]
   })
 }
@@ -162,11 +167,18 @@ resource "aws_apprunner_vpc_connector" "label_studio" {
   security_groups    = var.apprunner_vpc_connector_security_group_ids
 }
 
+resource "aws_security_group_rule" "allow_app_runner_to_db" {
+  type                     = "ingress"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  security_group_id        = var.db_security_group_ids[0]
+  source_security_group_id = aws_apprunner_vpc_connector.label_studio.security_group_ids[0]
+}
+
 module "bucket" {
   source = "terraform-aws-modules/s3-bucket/aws"
-
   bucket = "${var.identifier}-bucket"
-
   # https://labelstud.io/guide/persistent_storage#Configure-CORS-for-the-S3-bucket
   cors_rule = [
     {
