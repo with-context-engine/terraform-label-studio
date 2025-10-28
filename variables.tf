@@ -8,8 +8,34 @@ variable "identifier" {
 }
 
 variable "subnet_ids" {
-  description = "The IDs of the subnets"
+  description = "The IDs of the private subnets for VPC connector"
   type        = list(string)
+}
+
+variable "public_subnet_ids" {
+  description = "The IDs of the public subnets for NAT Gateway"
+  type        = list(string)
+}
+
+variable "enable_nat_gateway" {
+  description = "Enable NAT Gateway for internet access from private subnets"
+  type        = bool
+  default     = true
+}
+
+#################
+# Route53 Variables
+#################
+variable "custom_domain_name" {
+  description = "Custom domain name for App Runner service (e.g., brij-annotate.with-context.co)"
+  type        = string
+  default     = ""
+}
+
+variable "route53_hosted_zone_id" {
+  description = "Route53 hosted zone ID for the custom domain"
+  type        = string
+  default     = ""
 }
 
 #################
