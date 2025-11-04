@@ -130,6 +130,7 @@ resource "aws_apprunner_service" "label_studio" {
           POSTGRE_HOST            = module.db.db_instance_address
           POSTGRE_PORT            = module.db.db_instance_port
           POSTGRE_PASSWORD        = var.db_password
+          ML_TIMEOUT_PREDICT      = "180"
         }
       }
       image_identifier      = var.apprunner_label_studio_ecr_image_identifier
