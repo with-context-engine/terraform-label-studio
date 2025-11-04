@@ -106,12 +106,10 @@ resource "aws_iam_role_policy_attachment" "app_runner_instance_role_policy_attac
   policy_arn = aws_iam_policy.app_runner_instance_role_policy.arn
 }
 
-data "aws_secretsmanager_secret_version" "db_master_user_password" {
-  secret_id = module.db.db_instance_master_user_secret_arn
-}
-
-locals {
-  db_password = jsondecode(data.aws_secretsmanager_secret_version.db_master_user_password.secret_string)["password"]
+variable "db_password" {
+  description = "Database password (set this as environment variable TF_VAR_db_password or in terraform.tfvars)"
+  type        = string
+  sensitive   = true
 }
 
 resource "aws_apprunner_service" "label_studio" {
@@ -122,7 +120,7 @@ resource "aws_apprunner_service" "label_studio" {
     image_repository {
       image_configuration {
         port          = var.apprunner_port
-        start_command = "label-studio start my_project --init -db postgresql --username ${module.db.db_instance_username} --password ${local.db_password}"
+        start_command = "label-studio start my_project --init -db postgresql --username ${module.db.db_instance_username} --password ${var.db_password}"
         runtime_environment_variables = {
           USE_ENFORCE_CSRF_CHECKS = "false"
           DEBUG                   = "true"
@@ -131,7 +129,8 @@ resource "aws_apprunner_service" "label_studio" {
           POSTGRE_NAME            = module.db.db_instance_name
           POSTGRE_HOST            = module.db.db_instance_address
           POSTGRE_PORT            = module.db.db_instance_port
-          POSTGRE_PASSWORD        = local.db_password
+          POSTGRE_PASSWORD        = var.db_password
+          ML_TIMEOUT_PREDICT      = "180"
         }
       }
       image_identifier      = var.apprunner_label_studio_ecr_image_identifier
@@ -167,14 +166,95 @@ resource "aws_apprunner_vpc_connector" "label_studio" {
   security_groups    = var.apprunner_vpc_connector_security_group_ids
 }
 
-resource "aws_security_group_rule" "allow_app_runner_to_db" {
-  type                     = "ingress"
-  from_port                = 5432
-  to_port                  = 5432
-  protocol                 = "tcp"
-  security_group_id        = var.db_security_group_ids[0]
-  source_security_group_id = aws_apprunner_vpc_connector.label_studio.security_group_ids[0]
+# NAT Gateway resources for internet access
+resource "aws_eip" "nat" {
+  count  = var.enable_nat_gateway ? length(var.public_subnet_ids) : 0
+  domain = "vpc"
+
+  tags = {
+    Name = "${var.identifier}-nat-eip-${count.index + 1}"
+  }
 }
+
+resource "aws_nat_gateway" "main" {
+  count         = var.enable_nat_gateway ? length(var.public_subnet_ids) : 0
+  allocation_id = aws_eip.nat[count.index].id
+  subnet_id     = var.public_subnet_ids[count.index]
+
+  tags = {
+    Name = "${var.identifier}-nat-gateway-${count.index + 1}"
+  }
+
+  depends_on = [aws_eip.nat]
+}
+
+resource "aws_route_table" "private" {
+  count  = var.enable_nat_gateway ? length(var.subnet_ids) : 0
+  vpc_id = data.aws_subnet.private[0].vpc_id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.main[count.index].id
+  }
+
+  tags = {
+    Name = "${var.identifier}-private-rt-${count.index + 1}"
+  }
+}
+
+resource "aws_route_table_association" "private" {
+  count          = var.enable_nat_gateway ? length(var.subnet_ids) : 0
+  subnet_id      = var.subnet_ids[count.index]
+  route_table_id = aws_route_table.private[count.index].id
+}
+
+data "aws_subnet" "private" {
+  count = length(var.subnet_ids) > 0 ? 1 : 0
+  id    = var.subnet_ids[0]
+}
+
+# Custom Domain Association for App Runner
+resource "aws_apprunner_custom_domain_association" "label_studio" {
+  count       = var.custom_domain_name != "" ? 1 : 0
+  domain_name = var.custom_domain_name
+  service_arn = aws_apprunner_service.label_studio.arn
+}
+
+# Route53 validation records for App Runner custom domain
+resource "aws_route53_record" "apprunner_validation" {
+  for_each = var.custom_domain_name != "" ? {
+    for record in aws_apprunner_custom_domain_association.label_studio[0].certificate_validation_records :
+    record.name => record
+  } : {}
+
+  zone_id = var.route53_hosted_zone_id
+  name    = each.value.name
+  type    = each.value.type
+  records = [each.value.value]
+  ttl     = 300
+}
+
+# Route53 CNAME record pointing to App Runner service
+resource "aws_route53_record" "apprunner_alias" {
+  count   = var.custom_domain_name != "" ? 1 : 0
+  zone_id = var.route53_hosted_zone_id
+  name    = var.custom_domain_name
+  type    = "CNAME"
+  ttl     = 300
+  records = [aws_apprunner_service.label_studio.service_url]
+
+  depends_on = [aws_route53_record.apprunner_validation]
+}
+
+# Security group rule already exists - managed outside Terraform
+# resource "aws_security_group_rule" "allow_app_runner_to_db" {
+#   type                     = "ingress"
+#   from_port                = 5432
+#   to_port                  = 5432
+#   protocol                 = "tcp"
+#   security_group_id        = var.db_security_group_ids[0]
+#   source_security_group_id = tolist(aws_apprunner_vpc_connector.label_studio.security_groups)[0]
+# }
 
 module "bucket" {
   source = "terraform-aws-modules/s3-bucket/aws"
@@ -182,11 +262,11 @@ module "bucket" {
   # https://labelstud.io/guide/persistent_storage#Configure-CORS-for-the-S3-bucket
   cors_rule = [
     {
-      allowed_headers = ["*"]
-      allowed_methods = ["GET", "PUT", "POST", "DELETE", "HEAD"]
+      allowed_headers = ["Content-Type", "x-amz-meta-*", "x-amz-date", "x-amz-security-token", "x-amz-algorithm", "x-amz-credential", "x-amz-signature"]
+      allowed_methods = ["POST", "GET"]
       allowed_origins = ["*"]
-      expose_headers  = ["x-amz-server-side-encryption", "x-amz-request-id", "x-amz-id-2"]
-      max_age_seconds = 3600
+      expose_headers  = ["ETag", "x-amz-request-id", "x-amz-id-2", "Location"]
+      max_age_seconds = 3000
     }
   ]
 }

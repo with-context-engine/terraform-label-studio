@@ -1,0 +1,16 @@
+identifier                                      = "brij-v1"
+subnet_ids                                      = ["subnet-085ca7dc85d3e09c3", "subnet-0fc075f33eaf9d570"]
+public_subnet_ids                               = ["subnet-04cefa7e942ab5f89", "subnet-0bfd881d0830f19e1"]
+db_instance_class                               = "db.t4g.large"
+db_password                                     = "[REDACTED:password]"
+db_subnet_group_name                            = "brij-construction-db-subnet-group"
+db_security_group_ids                           = ["sg-003e8199ac334c04b"]
+apprunner_vpc_connector_security_group_ids      = ["sg-003e8199ac334c04b"]
+apprunner_runtime_instance_configuration = {
+  cpu    = "4 vCPU"
+  memory = "12 GB"
+}
+custom_domain_name                              = "brij-annotate.with-context.co"
+route53_hosted_zone_id                          = "Z022518631Q9V80I23LF7"
+apprunner_label_studio_ecr_image_repository_arn = "arn:aws:ecr:us-east-1:220582896887:repository/with-context/labelstudio"
+apprunner_label_studio_ecr_image_identifier     = "220582896887.dkr.ecr.us-east-1.amazonaws.com/with-context/labelstudio:latest"
